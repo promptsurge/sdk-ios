@@ -8,7 +8,7 @@ In Xcode: **File → Add Package Dependencies**, paste your repo URL, select the
 
 Or in `Package.swift`:
 ```swift
-.package(url: "https://github.com/your-org/promptsurge-ios.git", from: "1.0.0")
+.package(url: "https://github.com/promptsurge/sdk-ios.git", from: "1.0.0")
 ```
 
 ## Usage
