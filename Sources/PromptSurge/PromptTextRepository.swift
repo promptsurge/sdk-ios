@@ -1,0 +1,66 @@
+import Foundation
+
+final class PromptTextRepository {
+    private static let cacheKey = "ps_cached_prompt"
+    private static let cacheExpiry: TimeInterval = 6 * 3600
+
+    private let apiKey: String
+    private let apiBaseUrl: String
+    private let defaults: UserDefaults
+    private let session: URLSession
+
+    init(apiKey: String, apiBaseUrl: String, defaults: UserDefaults = .standard) {
+        self.apiKey = apiKey
+        self.apiBaseUrl = apiBaseUrl
+        self.defaults = defaults
+        self.session = URLSession(configuration: .ephemeral)
+    }
+
+    func fetch(completion: @escaping (PromptResponse?) -> Void) {
+        if let cached = loadCache() {
+            completion(cached)
+            fetchAndCache { _ in }
+            return
+        }
+        fetchAndCache(completion: completion)
+    }
+
+    private func fetchAndCache(completion: @escaping (PromptResponse?) -> Void) {
+        guard let url = URL(string: "\(apiBaseUrl)/v1/prompts") else {
+            completion(nil)
+            return
+        }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        req.setValue(Locale.current.identifier, forHTTPHeaderField: "Accept-Language")
+
+        session.dataTask(with: req) { [weak self] data, _, _ in
+            guard let data = data,
+                  let response = try? JSONDecoder().decode(PromptResponse.self, from: data) else {
+                completion(nil)
+                return
+            }
+            self?.saveCache(response)
+            completion(response)
+        }.resume()
+    }
+
+    private func loadCache() -> PromptResponse? {
+        guard let data = defaults.data(forKey: Self.cacheKey),
+              let wrapper = try? JSONDecoder().decode(CacheWrapper.self, from: data),
+              Date().timeIntervalSince(wrapper.savedAt) < Self.cacheExpiry else { return nil }
+        return wrapper.response
+    }
+
+    private func saveCache(_ response: PromptResponse) {
+        let wrapper = CacheWrapper(response: response, savedAt: Date())
+        if let data = try? JSONEncoder().encode(wrapper) {
+            defaults.set(data, forKey: Self.cacheKey)
+        }
+    }
+
+    private struct CacheWrapper: Codable {
+        let response: PromptResponse
+        let savedAt: Date
+    }
+}
