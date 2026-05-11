@@ -7,10 +7,13 @@ final class PrePromptViewController: UIViewController {
     private let onDismiss: () -> Void
 
     private let cardView = UIView()
+    private let headerImageView = UIImageView()
     private let titleLabel = UILabel()
     private let bodyLabel = UILabel()
     private let positiveButton = UIButton(type: .system)
     private let negativeButton = UIButton(type: .system)
+
+    private var imageHeightConstraint: NSLayoutConstraint?
 
     init(promptResponse: PromptResponse, onAccept: @escaping () -> Void, onDismiss: @escaping () -> Void) {
         self.promptResponse = promptResponse
@@ -45,6 +48,16 @@ final class PrePromptViewController: UIViewController {
         cardView.translatesAutoresizingMaskIntoConstraints = false
         cardView.isUserInteractionEnabled = true
         view.addSubview(cardView)
+
+        // Header image view — initially zero height, expands after image loads
+        headerImageView.contentMode = .scaleAspectFill
+        headerImageView.clipsToBounds = true
+        headerImageView.translatesAutoresizingMaskIntoConstraints = false
+        cardView.addSubview(headerImageView)
+
+        let imageHeight = headerImageView.heightAnchor.constraint(equalToConstant: 0)
+        imageHeight.isActive = true
+        imageHeightConstraint = imageHeight
 
         let textColor = color(theme?.textColor) ?? UIColor.label
 
@@ -87,7 +100,11 @@ final class PrePromptViewController: UIViewController {
             cardView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             cardView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.85),
 
-            titleLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 24),
+            headerImageView.topAnchor.constraint(equalTo: cardView.topAnchor),
+            headerImageView.leadingAnchor.constraint(equalTo: cardView.leadingAnchor),
+            headerImageView.trailingAnchor.constraint(equalTo: cardView.trailingAnchor),
+
+            titleLabel.topAnchor.constraint(equalTo: headerImageView.bottomAnchor, constant: 24),
             titleLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 20),
             titleLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -20),
 
@@ -101,6 +118,24 @@ final class PrePromptViewController: UIViewController {
             buttonStack.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -20),
             buttonStack.heightAnchor.constraint(equalToConstant: 44),
         ])
+
+        // Load header image asynchronously if URL provided
+        if let urlString = promptResponse.imageUrl, let url = URL(string: urlString) {
+            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+                guard let self, let data, let image = UIImage(data: data) else { return }
+                DispatchQueue.main.async {
+                    self.headerImageView.image = image
+                    // Set image height proportional to width (max 160 pt)
+                    let cardWidth = self.view.bounds.width * 0.85
+                    let ratio = image.size.height / image.size.width
+                    let targetHeight = min(cardWidth * ratio, 160)
+                    self.imageHeightConstraint?.constant = targetHeight
+                    UIView.animate(withDuration: 0.2) {
+                        self.view.layoutIfNeeded()
+                    }
+                }
+            }.resume()
+        }
     }
 
     @objc private func didTapAccept() {

@@ -1,5 +1,20 @@
 import Foundation
 
+// ─── API response (flat format returned by /v1/prompts) ───────────────────────
+
+struct APIPromptResponse: Codable {
+    let locale: String?
+    let title: String?
+    let body: String?
+    let ctaConfirm: String?
+    let ctaDismiss: String?
+    let imageUrl: String?
+    let promptNumber: Int?
+    let theme: DialogTheme?
+}
+
+// ─── Internal SDK model ───────────────────────────────────────────────────────
+
 struct PromptText: Codable {
     let title: String
     let body: String
@@ -21,7 +36,10 @@ struct PromptResponse: Codable {
     let appPromptNumber: Int?
     let text: PromptText
     let theme: DialogTheme?
+    let imageUrl: String?
 }
+
+// ─── Defaults ─────────────────────────────────────────────────────────────────
 
 let defaultPromptText = PromptText(
     title: "Enjoying the app?",
@@ -30,3 +48,21 @@ let defaultPromptText = PromptText(
     negativeButton: "Not now",
     locale: "en"
 )
+
+/// Map a decoded APIPromptResponse to the internal PromptResponse model.
+func mapAPIResponse(_ api: APIPromptResponse) -> PromptResponse {
+    let text = PromptText(
+        title: api.title ?? defaultPromptText.title,
+        body: api.body ?? defaultPromptText.body,
+        positiveButton: api.ctaConfirm ?? defaultPromptText.positiveButton,
+        negativeButton: api.ctaDismiss ?? defaultPromptText.negativeButton,
+        locale: api.locale ?? "en"
+    )
+    return PromptResponse(
+        promptId: "api",
+        appPromptNumber: api.promptNumber,
+        text: text,
+        theme: api.theme,
+        imageUrl: api.imageUrl
+    )
+}

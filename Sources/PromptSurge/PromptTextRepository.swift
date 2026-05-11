@@ -36,10 +36,11 @@ final class PromptTextRepository {
 
         session.dataTask(with: req) { [weak self] data, _, _ in
             guard let data = data,
-                  let response = try? JSONDecoder().decode(PromptResponse.self, from: data) else {
+                  let apiResp = try? JSONDecoder().decode(APIPromptResponse.self, from: data) else {
                 completion(nil)
                 return
             }
+            let response = mapAPIResponse(apiResp)
             self?.saveCache(response)
             completion(response)
         }.resume()
