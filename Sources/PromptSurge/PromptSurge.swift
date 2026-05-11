@@ -6,6 +6,7 @@ import UIKit
 /// at a natural moment in the user journey (e.g. after completing a level or purchase).
 public final class PromptSurge {
     private static var shared: PromptSurge?
+    private static let optOutKey = "com.promptsurge.optedOut"
 
     private let repository: PromptTextRepository
     private let telemetry: Telemetry
@@ -27,9 +28,26 @@ public final class PromptSurge {
     }
 
     /// Presents the pre-prompt dialog from `viewController` if rate limits and holdout allow.
-    /// Does nothing (silently) if `initialize` has not been called.
+    /// Does nothing (silently) if `initialize` has not been called or if the user has opted out.
     public static func requestReview(in viewController: UIViewController) {
+        guard !isOptedOut else { return }
         shared?.showDialog(from: viewController)
+    }
+
+    /// Opt this user out of all PromptSurge pre-prompt dialogs permanently (until `optIn()` is called).
+    /// Persisted in UserDefaults across launches. Safe to call before `initialize`.
+    public static func optOut() {
+        UserDefaults.standard.set(true, forKey: optOutKey)
+    }
+
+    /// Re-enable pre-prompt dialogs for this user after a previous `optOut()` call.
+    public static func optIn() {
+        UserDefaults.standard.set(false, forKey: optOutKey)
+    }
+
+    /// Whether the user has opted out of review prompts.
+    public static var isOptedOut: Bool {
+        UserDefaults.standard.bool(forKey: optOutKey)
     }
 
     // MARK: - Internal
