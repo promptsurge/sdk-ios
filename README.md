@@ -27,6 +27,7 @@ PromptSurge.requestReview(in: self) // self = UIViewController
 
 - **Holdout group:** 10% of devices are silently skipped (control group for measuring lift). Assignment is random and persists for the device's lifetime.
 - **Rate limiting:** After a "shown" event, the dialog won't reappear for 90 days. After a dismiss, 7 days.
+- **Impression limit:** When your plan's monthly cap is reached the API returns `402`. The SDK stores this flag in `UserDefaults` and on the next `requestReview()` call suppresses the dialog and fires `SKStoreReviewController` directly. Clears automatically when the next billing period begins.
 - **Fallback:** If the API is unreachable, a bundled English default prompt is shown.
 - **No sentiment gating:** Both buttons lead to `SKStoreReviewController` — required for Apple App Store Review guideline 5.6.1 compliance.
 
