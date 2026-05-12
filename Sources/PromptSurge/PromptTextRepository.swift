@@ -3,6 +3,7 @@ import Foundation
 final class PromptTextRepository {
     private static let cacheKey = "ps_cached_prompt"
     private static let cacheExpiry: TimeInterval = 6 * 3600
+    private static let impressionLimitKey = "ps_impression_limit_exceeded"
 
     private let apiKey: String
     private let apiBaseUrl: String
@@ -14,6 +15,10 @@ final class PromptTextRepository {
         self.apiBaseUrl = apiBaseUrl
         self.defaults = defaults
         self.session = URLSession(configuration: .ephemeral)
+    }
+
+    var isImpressionLimitExceeded: Bool {
+        defaults.bool(forKey: Self.impressionLimitKey)
     }
 
     func fetch(completion: @escaping (PromptResponse?) -> Void) {
@@ -34,15 +39,22 @@ final class PromptTextRepository {
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue(Locale.current.identifier, forHTTPHeaderField: "Accept-Language")
 
-        session.dataTask(with: req) { [weak self] data, _, _ in
+        session.dataTask(with: req) { [weak self] data, response, _ in
+            let statusCode = (response as? HTTPURLResponse)?.statusCode
+            if statusCode == 402 {
+                self?.defaults.set(true, forKey: Self.impressionLimitKey)
+                completion(nil)
+                return
+            }
             guard let data = data,
                   let apiResp = try? JSONDecoder().decode(APIPromptResponse.self, from: data) else {
                 completion(nil)
                 return
             }
-            let response = mapAPIResponse(apiResp)
-            self?.saveCache(response)
-            completion(response)
+            let mapped = mapAPIResponse(apiResp)
+            self?.defaults.set(false, forKey: Self.impressionLimitKey)
+            self?.saveCache(mapped)
+            completion(mapped)
         }.resume()
     }
 

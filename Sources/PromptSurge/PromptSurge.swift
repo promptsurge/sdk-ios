@@ -1,4 +1,5 @@
 import UIKit
+import StoreKit
 
 /// Entry point for the PromptSurge iOS SDK.
 ///
@@ -54,6 +55,19 @@ public final class PromptSurge {
 
     private func showDialog(from presenter: UIViewController) {
         guard !holdoutManager.isHoldout, rateLimiter.canShow else { return }
+
+        // Impression limit reached — skip pre-prompt, fire native review directly.
+        if repository.isImpressionLimitExceeded {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if let scene = presenter.view.window?.windowScene {
+                    SKStoreReviewController.requestReview(in: scene)
+                    self.telemetry.send(eventType: EventTypes.reviewRequested)
+                    self.rateLimiter.recordShown()
+                }
+            }
+            return
+        }
 
         repository.fetch { [weak self] response in
             DispatchQueue.main.async {
