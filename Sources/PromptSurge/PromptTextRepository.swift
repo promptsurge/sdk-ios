@@ -36,7 +36,7 @@ final class PromptTextRepository {
             return
         }
         var req = URLRequest(url: url)
-        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        req.setValue(apiKey, forHTTPHeaderField: "X-PromptSurge-Key")
         req.setValue(Locale.current.identifier, forHTTPHeaderField: "Accept-Language")
 
         session.dataTask(with: req) { [weak self] data, response, _ in

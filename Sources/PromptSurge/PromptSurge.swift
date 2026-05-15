@@ -54,7 +54,20 @@ public final class PromptSurge {
     // MARK: - Internal
 
     private func showDialog(from presenter: UIViewController) {
-        guard !holdoutManager.isHoldout, rateLimiter.canShow else { return }
+        guard rateLimiter.canShow else { return }
+
+        // Holdout group — skip pre-prompt but still fire native review as a baseline.
+        if holdoutManager.isHoldout {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if let scene = presenter.view.window?.windowScene {
+                    SKStoreReviewController.requestReview(in: scene)
+                    self.telemetry.send(eventType: EventTypes.nativePromptRequested)
+                    self.rateLimiter.recordShown()
+                }
+            }
+            return
+        }
 
         // Impression limit reached — skip pre-prompt, fire native review directly.
         if repository.isImpressionLimitExceeded {
@@ -62,7 +75,7 @@ public final class PromptSurge {
                 guard let self else { return }
                 if let scene = presenter.view.window?.windowScene {
                     SKStoreReviewController.requestReview(in: scene)
-                    self.telemetry.send(eventType: EventTypes.reviewRequested)
+                    self.telemetry.send(eventType: EventTypes.nativePromptRequested)
                     self.rateLimiter.recordShown()
                 }
             }
@@ -86,10 +99,10 @@ public final class PromptSurge {
                         guard let self else { return }
                         self.rateLimiter.recordShown()
                         self.telemetry.send(
-                            eventType: EventTypes.prePromptAccepted,
+                            eventType: EventTypes.prePromptConfirmed,
                             payload: self.promptPayload(effectiveResponse)
                         )
-                        self.telemetry.send(eventType: EventTypes.reviewRequested)
+                        self.telemetry.send(eventType: EventTypes.nativePromptRequested)
                     },
                     onDismiss: { [weak self] in
                         guard let self else { return }

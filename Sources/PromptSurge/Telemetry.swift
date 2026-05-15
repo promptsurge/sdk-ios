@@ -54,7 +54,7 @@ final class Telemetry {
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        req.setValue(apiKey, forHTTPHeaderField: "X-PromptSurge-Key")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
 
