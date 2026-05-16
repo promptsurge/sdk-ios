@@ -87,7 +87,8 @@ final class PrePromptViewController: UIViewController {
                     weight: .regular)
         negativeButton.addTarget(self, action: #selector(didTapDismiss), for: .touchUpInside)
 
-        let buttonStack = UIStackView(arrangedSubviews: [positiveButton, negativeButton])
+        // Negative (dismiss) on the left, positive (accept) on the right.
+        let buttonStack = UIStackView(arrangedSubviews: [negativeButton, positiveButton])
         buttonStack.axis = .horizontal
         buttonStack.distribution = .fillEqually
         buttonStack.spacing = 12

@@ -97,7 +97,7 @@ public final class PromptSurge {
                     promptResponse: effectiveResponse,
                     onAccept: { [weak self] in
                         guard let self else { return }
-                        self.rateLimiter.recordShown()
+                        // recordShown() was already called before presenting — do not call again here.
                         self.telemetry.send(
                             eventType: EventTypes.prePromptConfirmed,
                             payload: self.promptPayload(effectiveResponse)
